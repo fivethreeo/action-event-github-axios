@@ -19,26 +19,77 @@ const sendEvent = (token, user, reponame, github_event, payload) => {
     }
   })
 }
-const getUserRepo = () => {
-  return new Promise((resolve, reject) => {
-    execa("git", ["remote"], {shell: true}).then(( {stdout} ) => {
-      return stdout.split('\n');
-    }).then((remotes) => {
-      return execa("git", ["remote", "get-url", remotes[0]], {shell: true})
+
+const getRemotes = (selectMessage, remotes, defaultRemote) => {
+  return execa("git", ["remote"], {shell: true}).then(( {stdout} ) => {
+    return stdout.split('\n');
+  })
+}
+
+const selectRemote = (selectMessage, remotes, defaultRemote) => {
+  return new Promise((resolveRemote, rejectRemote) => {
+    const question = {
+      type: 'list',
+      name: 'remote',
+      message: selectMessage,
+      choices: remotes,
+      default: remotes.indexOf(defaultRemote),
+    };
+    inquirer.prompt(question).then(answer => {
+      if (answer.remote) {
+        resolveRemote(answer.remote);
+      } else {
+        resolveRemote(defaultRemote);
+      }
+    });
+  })
+}
+
+const getToken = (interactive = true) => {
+  return new Promise((resolveToken) => {
+    const defaultToken = process.env.GITHUB_TOKEN;
+    if (defaultToken) {
+      resolveToken(defaultToken);
+    } else if (interactive) {
+      const question = {
+        type: 'input',
+        name: 'token',
+        message: 'GITHUB_TOKEN env var not set, enter token:',
+      };
+      inquirer.prompt(question).then(answer => {
+        if (answer.token) {
+          resolveToken(answer.token);
+        }
+      });
+    } else {
+
+    }
+  })
+}
+
+const getUserRepo = (selectMessage, interactive = true) => {
+  return new Promise((resolveUserRepo) => {
+    getRemotes().then((remotes) => {
+      const defaultRemote = remotes.includes('origin') ? 'origin' : remotes[0];
+      if (interactive) {
+        return selectRemote(selectMessage, remotes, defaultRemote);
+      } else {
+        return defaultRemote;
+      }
+    }).then((remote) => {
+      return execa("git", ["remote", "get-url", remote], {shell: true})
     }).then(( {stdout} ) => {
       return stdout.split('\n')[0];
     }).then((url) => {
       const [, , , user, repo] = url.split(/\/|\.git/);
-      resolve([user, repo]);
-    }).catch(err => {
-      reject(err);
+      resolveUserRepo([user, repo]);
     });
   });
 }
 
-getUserRepo().then(([user, repo]) => {
-  console.log(user, repo)
-  sendEvent(defaultToken, user, repo, "test-event", {
+getUserRepo("Select remote to run test-event on").then(async ([user, repo]) => {
+  const token = await getToken();
+  sendEvent(token, user, repo, "test-event", {
     "unit": false,
     "integration": true
   }).then(res => {
@@ -47,21 +98,3 @@ getUserRepo().then(([user, repo]) => {
     console.log(err)
   })
 });
-
-// const question = {
-//   type: 'confirm',
-//   name: 'shouldChangePort',
-//   message:
-//     chalk.yellow(
-//       message +
-//         `${existingProcess ? ` Probably:\n  ${existingProcess}` : ''}`
-//     ) + '\n\nWould you like to run the app on another port instead?',
-//   default: true,
-// };
-// inquirer.prompt(question).then(answer => {
-//   if (answer.shouldChangePort) {
-//     resolve(port);
-//   } else {
-//     resolve(null);
-//   }
-// });
