@@ -1,0 +1,19 @@
+{
+  "name": "action-event-github-axios",
+  "version": "1.0.0",
+  "description": "test of github action events with axios",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/fivethreeo/action-event-github-axios.git"
+  },
+  "bugs": {
+    "url": "https://github.com/fivethreeo/action-event-github-axios/issues"
+  },
+  "scripts": {
+    "sendevent": "node ./scripts/sendevent.js"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^0.19.2"
+  }
+}

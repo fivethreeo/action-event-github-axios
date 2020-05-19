@@ -1,0 +1,14 @@
+
+name: Event test
+on:
+  repository_dispatch:
+    types: [test-event]
+
+jobs:
+  example:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Echo something
+      run: echo something
