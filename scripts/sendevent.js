@@ -5,25 +5,31 @@ const inquirer = require('inquirer');
 
 const sendEvent = (token, user, reponame, github_event, payload) => {
   return axios({
-    method: "POST",
+    method: 'POST',
     url: `https://api.github.com/repos/${user}/${reponame}/dispatches`,
     headers: {
       Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json"
+      'Content-Type': 'application/json'
     },
     data: {
-      "event_type": github_event,
-      "client_payload": payload
+      'event_type': github_event,
+      'client_payload': payload
     }
   })
 }
 
 const getRemotes = (selectMessage, remotes, defaultRemote) => {
-  return execa("git", ["remote"], {shell: true}).then(( {stdout} ) => {
+  return execa('git', ['remote'], {shell: true}).then(({stdout}) => {
     return stdout.split('\n');
   })
 }
 
+const getRemoteUrl = (remote) => {
+  return execa('git', ['remote', 'get-url', remote], {shell: true})
+  .then(({stdout}) => {
+    return stdout.split('\n')[0];
+  })
+}
 const selectRemote = (selectMessage, remotes, defaultRemote) => {
   return new Promise((resolveRemote, rejectRemote) => {
     const question = {
@@ -75,24 +81,24 @@ const getUserRepo = (selectMessage, interactive = true) => {
         return defaultRemote;
       }
     }).then((remote) => {
-      return execa("git", ["remote", "get-url", remote], {shell: true})
-    }).then(( {stdout} ) => {
-      return stdout.split('\n')[0];
-    }).then((url) => {
+      return getRemoteUrl(remote);
+    })
+    .then((url) => {
       const [, , , user, repo] = url.split(/\/|\.git/);
       resolveUserRepo([user, repo]);
     });
   });
 }
 
-getUserRepo("Select remote to run test-event on").then(async ([user, repo]) => {
-  const token = await getToken();
-  sendEvent(token, user, repo, "test-event", {
-    "unit": false,
-    "integration": true
-  }).then(res => {
-    console.log(JSON.stringify(res.data));
-  }).catch(err => {
-    console.log(err)
+getToken().then(token => {
+  getUserRepo('Select remote to run test-event on').then(([user, repo]) => {
+    sendEvent(token, user, repo, 'test-event', {
+      'unit': false,
+      'integration': true
+    }).then(res => {
+      console.log(JSON.stringify(res.data));
+    }).catch(err => {
+      console.log(err)
+    })
   })
 });
