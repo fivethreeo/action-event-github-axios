@@ -3,8 +3,6 @@ const execa = require('execa');
 const chalk = require('chalk');
 const inquirer = require('inquirer');
 
-const defaultToken = process.env.GITHUB_TOKEN;
-
 const sendEvent = (token, user, reponame, github_event, payload) => {
   return axios({
     method: "POST",
